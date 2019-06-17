@@ -1,0 +1,131 @@
+---
+title: "Final_report"
+author: "Shipeng Sun"
+date: "June 14, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data
+
+For this report, we have dataset gapminder which contains a collection of records measured from 1800 to 2015. There are 6 variables that we will focus on. We will do analysis on life expectancy which maybe effected by GDP, region, country and year. 
+
+Variables in the gapminder data set are:
+
+* **life** - life expectancy
+* **income** - gdp per capita
+* **year** - measured year from 1800 to 2015
+* **county** - countries in the world included
+* **region** -  regions includes all contries
+* **population** - census data collected about every 10 years
+
+## Questions to Answer
+1. What's the relationship between GPD and region? 
+2. What's a potential relationship between a country’s GDP (income) and life expectancy?
+3. For example in region America, how does it look like regarding to Life Expectancy Per Region in recent years?
+ 
+## Data narrative summary
+```{r, echo = FALSE, message=FALSE, results="hide", warning=FALSE}
+library(readr)
+library(tidyverse)
+library(dplyr)
+rm(list = ls())
+gapminder <- read_csv("C:/Users/woity/Desktop/HU courses/506/final_report/gapminder.csv")
+head(gapminder)
+tail(gapminder) 
+names(gapminder)
+summary(gapminder)
+Obs = nrow(gapminder)
+Vars = ncol(gapminder)
+year2015 <- filter(gapminder, Year == 2015)
+```
+
+1. There are **`r Obs`** observations in the dataset.
+2. There are **`r Vars`** variables in the dataset. Number of missing value of the dataset for each variables are **`r colSums(is.na(gapminder))`** 
+3. Type of variables: 
+- "Country" is **`r class(gapminder$Country)`**.
+- "Year" is **`r class(gapminder$Year)`**.
+- "life" is **`r class(gapminder$life)`**.
+- "population" is **`r class(gapminder$population)`**.
+- "income" is **`r class(gapminder$income)`**.
+- "region" is **`r class(gapminder$region)`**.
+4. How disperse is the data: 
+- Range of "Year" is **`r range(gapminder$Year)`**. 
+- Range of "life" is **`r range(gapminder$life)`**. 
+- Range of "income" is **`r range(gapminder$income, na.rm = TRUE)`**.
+5. Data wrangling: The average life expectancy in year 2015 is **`r mean(year2015$life, na.rm = TRUE)`**.
+6. Preprocessing steps: To deal with missing data, I filled the missing population data by most recent not null values because of data continuity. Besides, rows with empty income values are removed, and type of population is converted from factor to numeric type for later processing. Below shows details.
+
+```{r, echo = FALSE, message=FALSE, results="hide", warning=FALSE}
+gapminder2 = filter(gapminder, !is.na(gapminder$income))
+class(gapminder2$population)
+gapminder2$population = as.numeric(as.character(gapminder2$population))
+class(gapminder2$population)
+gapminder2 <- gapminder2 %>% fill(population)
+```
+
+## Exploratory Plots
+```{r, echo = FALSE, message=FALSE, results="hide", warning=FALSE}
+ggplot(gapminder2, aes(region, income, color = region)) + geom_boxplot() + labs(title="GDP/Region relationship", y = "GDP", x = "Region")
+```
+
+The above **Fig. 1** is a boxplot which shows the total GPD (income) per Region. 
+
+
+```{r, echo = FALSE, message=FALSE, results="hide", warning=FALSE}
+ggplot(data = gapminder2, mapping = aes(x = income, y = life, color = region)) +
+  geom_point(alpha = 0.5) +
+  scale_x_log10()+
+  scale_color_manual(values = c("red","yellow", "orange","green","blue","purple")) + 
+  labs(title="The relation between GDP and Life Expenctancy", y = "Life Expectancy", x = "GDP")
+```
+
+The above **Fig. 2** is a scatter plot which shows the relation between GDP and Life Expenctancy. 
+
+```{r, echo = FALSE, message=FALSE, results="hide", warning=FALSE}
+gm2010 <- filter(gapminder2, Year >= 2010)
+ggplot(gm2010, aes(region, life, color = region)) + geom_boxplot() + labs(title="Life Expectancy Per Region since 2010", y = "Life Expectancy", x = "Region")
+```
+
+The above **Fig. 3** is a boxplot which shows the Life Expectancy Per Region in the recent years. 
+
+## Clustering Analysis
+
+**Note:** I take America region data as an example here.
+
+```{r, echo = FALSE, message=FALSE, results="hide", warning=FALSE}
+library("factoextra")
+# prepare data
+gm_america <- filter(gapminder2, region == "America")
+gm_life_income_america <- select(gm_america, income, life)
+# Silhouette Method
+fviz_nbclust(gm_life_income_america, kmeans, method = "silhouette",nstart=20) # cluster 2
+# Elbow Method
+fviz_nbclust(gm_life_income_america, kmeans, method = "wss",nstart=20) # cluster 3
+```
+
+The **Fig. 4** (above two figures) is for finding the number of clusters using Silhouette Method and Elbow Method.
+
+```{r, echo = FALSE, message=FALSE, results="hide", warning=FALSE}
+# try 2 clusters and 3 clusters
+k2 <- kmeans(gm_life_income_america, centers = 2)
+k3 <- kmeans(gm_life_income_america, centers = 3)
+# compare
+fviz_cluster(k2, geom = "point", data = gm_life_income_america) + ggtitle("cluster = 2") + 
+  xlab("GDP") + ylab("Life Expectancy")
+fviz_cluster(k3, geom = "point",  data = gm_life_income_america) + ggtitle("cluster = 3") +
+  xlab("GDP") + ylab("Life Expectancy")
+```
+
+The **Fig. 5** (above two figures) is the visualization of kmeans of 2 clusters and 3 clusters .
+
+## Answers:
+1. From **Fig. 1**, we know region has effect on GPD and GPD have big difference between diffrent regions.
+2. From **Fig. 2**, there's a positive relationship between a country’s GDP (income) and life expectancy.
+3. From **Fig. 5**, lower income (GDP) will lead lower life expectancy, but when the income comes to a certain high level, the life expectancy won't increase too much.
+
+
+
